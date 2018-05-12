@@ -78,18 +78,19 @@ class ContinuousMountainCarForward(ForwardModel):
         :param action: [bsz, 1]
         :return: nextstate [bsz, 2]. reward [bsz, 1]
         """
-        action = action.squeeze(1)
+        # [bsz]
+        action = action.squeeze(-1)
 
         # [bsz]
         position = state[:, 0]
         velocity = state[:, 1]
         force = torch.clamp(action, self.min_action, self.max_action)
 
-        velocity += force*self.power - 0.0025 * torch.cos(3*position)
-        velocity = torch.clamp(velocity, -self.max_speed, self.max_speed)
-        position += velocity
-        position = torch.clamp(position, self.min_position, self.max_position)
+        new_v = velocity + force*self.power - 0.0025 * torch.cos(3*position)
+        new_v = torch.clamp(new_v, -self.max_speed, self.max_speed)
+        new_pos = position + new_v
+        new_pos = torch.clamp(new_pos, self.min_position, self.max_position)
 
-        reward = position - self.goal_position
-        nextstate = torch.stack([position, velocity], dim=1)
-        return nextstate, reward
+        reward = new_pos - self.goal_position
+        nextstate = torch.stack([new_pos, new_v], dim=1)
+        return nextstate, reward.unsqueeze(-1)
