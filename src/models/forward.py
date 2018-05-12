@@ -62,3 +62,34 @@ class PendulumForward(ForwardModel):
         next_state = torch.stack([newth, newthdot], dim=1)
         return next_state, -costs
 
+class ContinuousMountainCarForward(ForwardModel):
+    def __init__(self):
+        self.min_action = -1.0
+        self.max_action = 1.0
+        self.min_position = -1.2
+        self.max_position = 0.6
+        self.max_speed = 0.07
+        self.goal_position = 0.45
+        self.power = 0.0015
+
+    def step(self, state, action):
+        """
+        :param state: [bsz, 2]
+        :param action: [bsz, 1]
+        :return: nextstate [bsz, 2]. reward [bsz, 1]
+        """
+        action = action.squeeze(1)
+
+        # [bsz]
+        position = state[:, 0]
+        velocity = state[:, 1]
+        force = torch.clamp(action, self.min_action, self.max_action)
+
+        velocity += force*self.power - 0.0025 * torch.cos(3*position)
+        velocity = torch.clamp(velocity, -self.max_speed, self.max_speed)
+        position += velocity
+        position = torch.clamp(position, self.min_position, self.max_position)
+
+        reward = position - self.goal_position
+        nextstate = torch.stack([position, velocity], dim=1)
+        return nextstate, reward

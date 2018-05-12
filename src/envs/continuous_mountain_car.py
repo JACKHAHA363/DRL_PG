@@ -53,15 +53,10 @@ class Continuous_MountainCarEnv(gym.Env):
         if (position < self.min_position): position = self.min_position
         if (position==self.min_position and velocity<0): velocity = 0
 
-        done = bool(position >= self.goal_position)
-
-        reward = 0
-        if done:
-            reward = 100.0
-        reward-= math.pow(action[0],2)*0.1
+        reward = position - self.goal_position
 
         self.state = np.array([position, velocity])
-        return self.state, reward, done, {}
+        return self.state, reward, False, {}
 
     def reset(self):
         self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])

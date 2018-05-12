@@ -1,1 +1,2 @@
 from .pendulum import PendulumEnv
+from .continuous_mountain_car import Continuous_MountainCarEnv
