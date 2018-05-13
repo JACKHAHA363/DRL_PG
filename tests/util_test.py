@@ -1,4 +1,4 @@
-from src.main import sample_episode, compute_returns
+from src.utils import sample_episode, compute_returns
 from src.envs import PendulumEnv, Continuous_MountainCarEnv
 from src.models import MLPContinuousPolicy
 from src.storage import RollOut

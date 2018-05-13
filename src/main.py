@@ -8,57 +8,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
-# get around pytest. should be fixed in the future
-if __name__ == '__main__':
-    from envs import PendulumEnv
-    from models import MLPCritic, MLPContinuousPolicy
-    from storage import RollOut
-else:
-    from .envs import PendulumEnv
-    from .models import MLPCritic, MLPContinuousPolicy
-    from .storage import RollOut
-
-
-def sample_episode(env, memory, actor, T, render=False):
-    """
-    sample from `env` and store things into `memory` from `actor`
-    """
-    noise = torch.zeros([1,1])
-    state = env.reset()
-    memory.reset()
-    t = 0
-    while t < T:
-        state_t = torch.from_numpy(state).float().unsqueeze(0)
-        mean, logvar = actor(state_t)
-        noise.normal_()
-        action_t = mean + noise * torch.exp(0.5 * logvar)
-        action = action_t.detach().numpy()[0]
-
-        # env step
-        next_state, reward, done, _ = env.step(action)
-        memory.add_transition(state, action, reward, noise.item())
-        state = next_state
-        t += 1
-
-        if render:
-            env.render()
-        if done:
-            break
-
-def compute_returns(memory, gamma):
-    """
-    Compute the returns
-    :return: [num_states]. np.array
-    """
-    rewards = memory.rewards
-    assert len(rewards) > 0 # make it's not empty
-    returns = np.zeros([len(rewards)])
-    ret = 0
-    for i in reversed(range(len(rewards))):
-        returns[i] = rewards[i] + gamma * ret
-        ret = returns[i]
-    return returns
-
+from envs import PendulumEnv
+from models import MLPCritic, MLPContinuousPolicy
+from storage import RollOut
+from utils import sample_episode, compute_returns
 
 def parser_args():
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
@@ -78,7 +31,6 @@ def parser_args():
     return args
 
 
-#########MAIN#################################################
 def main():
     args = parser_args()
     env = PendulumEnv()
@@ -106,8 +58,20 @@ def main():
         rets_np = compute_returns(memory, args.gamma)
         rets = torch.from_numpy(rets_np).unsqueeze(-1) # [T, 1]
         rets_pred = critic(states) # [T, 1]
-        import ipdb
-        ipdb.set_trace()
+        critic_loss = (rets - rets_pred).pow(2).mean()
+        critic_opt.zero_grad()
+        critic_loss.backward()
+        critic_opt.step()
+
+        if args.baseline == 'value':
+            baseline = rets_pred.detach()
+        if args.baseline == 'model':
+            raise NotImplementedError
+        else:
+            baseline = 0
+
+        # train policy
+        #logprobs = evaluate_actions(states, actions, actor)
 
 
 if __name__ == '__main__':

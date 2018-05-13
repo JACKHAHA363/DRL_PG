@@ -1,7 +1,7 @@
 from src.storage import RollOut
 from src.envs import PendulumEnv
 from src.models import MLPContinuousPolicy
-from src.main import sample_episode
+from src.utils import sample_episode
 
 def test_rollout():
     env = PendulumEnv()
