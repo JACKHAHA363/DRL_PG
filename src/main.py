@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
+# get around pytest. should be fixed in the future
 if __name__ == '__main__':
     from envs import PendulumEnv
     from models import MLPCritic, MLPContinuousPolicy
@@ -31,10 +32,10 @@ def sample_episode(env, memory, actor, T, render=False):
         mean, logvar = actor(state_t)
         noise.normal_()
         action_t = mean + noise * torch.exp(0.5 * logvar)
-        action = action_t.item()
+        action = action_t.detach().numpy()[0]
 
         # env step
-        next_state, reward, done, _ = env.step([action])
+        next_state, reward, done, _ = env.step(action)
         memory.add_transition(state, action, reward, noise.item())
         state = next_state
         t += 1
@@ -103,7 +104,7 @@ def main():
 
         # train critic
         rets_np = compute_returns(memory, args.gamma)
-        rets = torch.from_numpy(rets_np).unsqueeze(0) # [T, 1]
+        rets = torch.from_numpy(rets_np).unsqueeze(-1) # [T, 1]
         rets_pred = critic(states) # [T, 1]
         import ipdb
         ipdb.set_trace()

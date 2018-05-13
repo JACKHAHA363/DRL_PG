@@ -39,8 +39,8 @@ class RollOut(object):
             noise: [T, 1]. Tensor
         """
         assert len(self.states) > 0 # we have something
-        t_states = torch.from_numpy(np.array(self.states)).unsqueeze(0)
-        t_actions = torch.from_numpy(np.array(self.actions)).unsqueeze(0)
-        t_rewards = torch.from_numpy(np.array(self.rewards)).unsqueeze(0)
-        t_noise = torch.from_numpy(np.array(self.noise)).unsqueeze(0)
-        return t_states, t_actions, t_rewards, t_noise
+        t_states = torch.from_numpy(np.array(self.states))
+        t_actions = torch.from_numpy(np.array(self.actions))
+        t_rewards = torch.from_numpy(np.array(self.rewards)).unsqueeze(-1)
+        t_noise = torch.from_numpy(np.array(self.noise)).unsqueeze(-1)
+        return t_states.float(), t_actions.float(), t_rewards.float(), t_noise.float()
