@@ -7,9 +7,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
-from .envs import PendulumEnv
-from .models import MLPCritic, MLPContinuousPolicy
-from .storage import RollOut
+
+if __name__ == '__main__':
+    from envs import PendulumEnv
+    from models import MLPCritic, MLPContinuousPolicy
+    from storage import RollOut
+else:
+    from .envs import PendulumEnv
+    from .models import MLPCritic, MLPContinuousPolicy
+    from .storage import RollOut
+
 
 def sample_episode(env, memory, actor, T, render=False):
     """
@@ -29,10 +36,11 @@ def sample_episode(env, memory, actor, T, render=False):
         # env step
         next_state, reward, done, _ = env.step([action])
         memory.add_transition(state, action, reward, noise.item())
+        state = next_state
         t += 1
+
         if render:
             env.render()
-
         if done:
             break
 
@@ -88,9 +96,18 @@ def main():
     memory = RollOut()
 
     for step in range(args.steps):
-        sample_episode(env, memory, actor, args)
+        sample_episode(env, memory, actor, args.T, args.render)
+
+        # preparing batcha
+        states, actions, rewards, noise = memory.to_tensors()
 
         # train critic
+        rets_np = compute_returns(memory, args.gamma)
+        rets = torch.from_numpy(rets_np).unsqueeze(0) # [T, 1]
+        rets_pred = critic(states) # [T, 1]
+        import ipdb
+        ipdb.set_trace()
+
 
 if __name__ == '__main__':
     main()

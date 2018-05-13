@@ -2,7 +2,7 @@ from src.main import sample_episode, compute_returns
 from src.envs import PendulumEnv, Continuous_MountainCarEnv
 from src.models import MLPContinuousPolicy
 from src.storage import RollOut
-
+import numpy as np
 
 def test_sample_episodes():
     env = PendulumEnv()
@@ -33,4 +33,6 @@ def test_compute_returns():
     sample_episode(env, memory, actor, 100, render=True)
     returns = compute_returns(memory, gamma=1)
     assert returns[-1] == memory.rewards[-1]
-    assert returns[0] == sum(memory.rewards)
+    print(returns[0])
+    print(sum(memory.rewards))
+    assert np.allclose(returns[0], sum(memory.rewards))
