@@ -25,6 +25,8 @@ class MLPCritic(nn.Module):
             nn.Linear(num_hidden, 1),
         )
 
+        self.apply(self.weight_init)
+
     def forward(self, states):
         """
         :param states: [bsz, state_dim]
@@ -32,6 +34,14 @@ class MLPCritic(nn.Module):
         """
         return self.main(states)
 
+    def weight_init(self, m):
+        """
+        weight initialization
+        """
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+            torch.nn.init.xavier_normal_(m.weight)
+            torch.nn.init.constant_(m.bias, 0)
 
 class MLPContinuousPolicy(nn.Module):
     """
@@ -52,7 +62,9 @@ class MLPContinuousPolicy(nn.Module):
             nn.SELU(inplace=True)
         )
         self.mean_head = nn.Linear(num_hidden, action_dim)
-        self.logvars = nn.Parameter(-10 * torch.ones(1, action_dim))
+        self.logvars = nn.Parameter(0 * torch.ones(1, action_dim))
+
+        self.apply(self.weight_init)
 
     def forward(self, states):
         """
@@ -62,6 +74,15 @@ class MLPContinuousPolicy(nn.Module):
         tmp = self.base(states)
         means = self.mean_head(tmp)
         return means, self.logvars.expand_as(means)
+
+    def weight_init(self, m):
+        """
+        weight initialization
+        """
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+            torch.nn.init.xavier_normal_(m.weight)
+            torch.nn.init.constant_(m.bias, 0)
 
 
 class MLPDiscretePolicy(nn.Module):

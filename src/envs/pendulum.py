@@ -43,7 +43,7 @@ class PendulumEnv(gym.Env):
         costs = th**2 + .1*thdot**2 + .001*(u**2)
 
         newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
-        newth = th + newthdot*dt
+        newth = self.normalize_angle(th + newthdot*dt)
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
 
         self.state = np.array([newth, newthdot])
@@ -87,4 +87,7 @@ class PendulumEnv(gym.Env):
 
     def close(self):
         if self.viewer: self.viewer.close()
+
+    def normalize_angle(self, theta):
+        return (theta + math.pi) % (2*math.pi) - math.pi
 

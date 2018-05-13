@@ -23,6 +23,7 @@ class ForwardModel(object):
         """
         pass
 
+
 class PendulumForward(ForwardModel):
     """
     The ground truth model for pendulum
@@ -61,6 +62,16 @@ class PendulumForward(ForwardModel):
         # [bsz, 2]
         next_state = torch.stack([newth, newthdot], dim=1)
         return next_state, -costs
+
+    def angle_normalize(self, theta):
+        """
+        a differentiable normalize with the same result
+        :param theta: [bsz]
+        :return: angle from -pi to pi
+        """
+        k = (theta + math.pi) // (2*math.pi)
+        remainder = theta + math.pi - k * 2 * math.pi
+        return remainder - math.pi
 
 class ContinuousMountainCarForward(ForwardModel):
     def __init__(self):
