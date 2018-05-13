@@ -63,15 +63,40 @@ def main():
         critic_loss.backward()
         critic_opt.step()
 
+        # baseline [bsz, 1]
         if args.baseline == 'value':
             baseline = rets_pred.detach()
-        if args.baseline == 'model':
+        elif args.baseline == 'model':
             raise NotImplementedError
         else:
             baseline = 0
 
-        # train policy
-        #logprobs = evaluate_actions(states, actions, actor)
+        # reinforce logprobs with returns/advantages
+        # another forward pass to evaluate actions
+        means, logvars = actor(states) # [T, action_dim]
+
+        # logprobs = -0.5 logvar - (x-mu)^2/2sigma^2
+        vars = torch.exp(logvars)
+
+        # [bsz, 1]
+        logprobs = (-0.5*logvars - (actions - means).pow(2) / 2*vars)
+        logprobs = torch.sum(logprobs, dim=1, keepdim=True)
+        actor_loss = -((rets - baseline) * logprobs).sum()
+
+        # add correction bias term
+        if args.baseline == 'world':
+            raise NotImplementedError
+
+        actor_opt.zero_grad()
+        actor_loss.backward()
+        actor_opt.step()
+
+        # record statistics
+        if (step+1) % args.log_interval == 0:
+            rewards_per_step = rewards.mean().item()
+            print("at step {}\treward per step{:.2f}\t")
+
+
 
 
 if __name__ == '__main__':

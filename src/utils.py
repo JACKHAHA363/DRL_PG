@@ -45,3 +45,5 @@ def compute_returns(memory, gamma):
         returns[i] = rewards[i] + gamma * ret
         ret = returns[i]
     return returns
+
+

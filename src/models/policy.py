@@ -52,7 +52,7 @@ class MLPContinuousPolicy(nn.Module):
             nn.SELU(inplace=True)
         )
         self.mean_head = nn.Linear(num_hidden, action_dim)
-        self.logvar_head = nn.Linear(num_hidden, action_dim)
+        self.logvars = nn.Parameter(-10 * torch.ones(1, action_dim))
 
     def forward(self, states):
         """
@@ -60,7 +60,8 @@ class MLPContinuousPolicy(nn.Module):
         :return: means [bsz, action_dim]. logvars [bsz, action_dim]
         """
         tmp = self.base(states)
-        return self.mean_head(tmp), self.logvar_head(tmp)
+        means = self.mean_head(tmp)
+        return means, self.logvars.expand_as(means)
 
 
 class MLPDiscretePolicy(nn.Module):
