@@ -47,7 +47,7 @@ class MLPContinuousPolicy(nn.Module):
     """
     For classic control
     """
-    def __init__(self, state_dim, action_dim, num_hidden=10):
+    def __init__(self, state_dim, action_dim, num_hidden=20):
         """
         :param state_dim: state dimension
         :param action_dim: number of actions
@@ -57,9 +57,9 @@ class MLPContinuousPolicy(nn.Module):
         super().__init__()
         self.base = nn.Sequential(
             nn.Linear(state_dim, num_hidden),
-            nn.SELU(inplace=True),
+            nn.Tanh(),
             nn.Linear(num_hidden, num_hidden),
-            nn.SELU(inplace=True)
+            nn.Tanh(),
         )
         self.mean_head = nn.Linear(num_hidden, action_dim)
         self.logvars = nn.Parameter(0 * torch.ones(1, action_dim))
@@ -81,7 +81,7 @@ class MLPContinuousPolicy(nn.Module):
         """
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
-            torch.nn.init.xavier_normal_(m.weight)
+            torch.nn.init.xavier_normal_(m.weight, gain=0.01)
             torch.nn.init.constant_(m.bias, 0)
 
 
