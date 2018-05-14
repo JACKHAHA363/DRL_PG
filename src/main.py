@@ -7,7 +7,7 @@ import torch.optim as optim
 from envs import PendulumEnv, Continuous_MountainCarEnv
 from models import MLPCritic, MLPContinuousPolicy
 from storage import RollOut, Dataset
-from utils import sample_episode, compute_returns
+from utils import Runner
 from tensorboardX import SummaryWriter
 
 def parser_args():
@@ -19,20 +19,22 @@ def parser_args():
                         help='discount factor (default: 0.99)')
     parser.add_argument('--render', action='store_true',
                         help='render the environment')
-    parser.add_argument('--log_interval', type=int, default=10, metavar='N',
+    parser.add_argument('--log_interval', type=int, default=2, metavar='N',
                         help='interval between training status logs (default: 10)')
     parser.add_argument('--baseline', type=str, default=None,
                         help="[None]|[value]|[model]")
-    parser.add_argument('--T', default=5000, type=int, help="maximum length of each episode")
+    parser.add_argument('--T', default=100, type=int, help="maximum length of each episode")
+    parser.add_argument('--batch_size', default=10000, type=int,
+                        help='number of transitions each iteration')
     parser.add_argument('--steps', default=1000, type=int, help="number of policy updates")
 
     # policy optimization
     parser.add_argument('--actor_epochs', default=1, type=int)
-    parser.add_argument('--actor_bsz', default=200, type=int)
+    parser.add_argument('--actor_bsz', default=10000, type=int)
 
     # critic optimization
     parser.add_argument('--critic_epochs', default=1, type=int)
-    parser.add_argument('--critic_bsz', default=200, type=int)
+    parser.add_argument('--critic_bsz', default=128, type=int)
 
     args = parser.parse_args()
     return args
@@ -52,18 +54,18 @@ def main():
 
     actor = MLPContinuousPolicy(state_dim=env.observation_space.shape[0],
                                 action_dim=env.action_space.shape[0],
-                                num_hidden=30)
-    critic = MLPCritic(state_dim=env.observation_space.shape[0], num_hidden=30)
-    actor_opt = optim.Adam(actor.parameters(), lr=1e-5, eps=1e-5)
-    critic_opt = optim.Adam(critic.parameters(), lr=1e-5)
+                                num_hidden=10)
+    critic = MLPCritic(state_dim=env.observation_space.shape[0], num_hidden=10)
+    actor_opt = optim.Adam(actor.parameters(), lr=1e-3)
+    critic_opt = optim.Adam(critic.parameters(), lr=1e-3)
 
     memory = RollOut()
 
     writer = SummaryWriter(log_dir='{args.env}_{args.baseline}'.format(args=args))
+    runner = Runner(env, memory, args.batch_size, args.T, actor)
     for step in range(args.steps):
-        sample_episode(env, memory, actor, args.T, args.render)
-
         # preparing dataset
+        runner.sample()
         dataset = Dataset(memory, actor, critic, args.gamma)
 
         # train critic
@@ -115,15 +117,11 @@ def main():
 
         # record statistics
         if (step+1) % args.log_interval == 0:
-            rewards = dataset.rewards
-            print("at step {}\treward per step{:.2f}\t".format(
-                step+1, rewards.mean().item())
-            )
-        rewards = dataset.rewards
-        writer.add_scalar('reward_per_step', rewards.mean().item(), step+1)
-
-    print("display testing")
-    sample_episode(env, memory, actor, args.T, render=True)
+            stats = runner.stats
+            print('------- iter{} ----------'.format(step+1))
+            for key in stats.keys():
+                print("{} : {:.3f}".format(key, stats[key]))
+                writer.add_scalar(key, stats[key], step+1)
 
 
 if __name__ == '__main__':

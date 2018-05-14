@@ -1,50 +1,63 @@
 import torch
-import numpy as np
 
 
-def sample_episode(env, memory, actor, T, render=False):
+class Runner(object):
     """
-    sample from `env` and store things into `memory` from `actor`
-    :param env: `env` object
-    :param memory: rollout object
-    :param actor: policy network
+    Sample from env and store it into memory
     """
-    noise = torch.zeros([1,1])
-    state = env.reset()
-    memory.reset()
-    t = 0
-    while t < T:
-        state_t = torch.from_numpy(state).float().unsqueeze(0)
-        mean, logvar = actor(state_t)
-        noise.normal_()
-        action_t = mean + noise * torch.exp(0.5 * logvar)
-        action = action_t.detach().numpy()[0]
+    def __init__(self, env, memory, batch_size, T, actor):
+        self.env = env
+        self.memory = memory
+        self.batch_size = batch_size
+        self.T = T
+        self.actor = actor
+        self.stats = {} # empty dict
 
-        # env step
-        next_state, reward, done, _ = env.step(action)
-        memory.add_transition(state, action, reward, noise.item())
-        state = next_state
-        t += 1
+    def sample(self, render=False):
+        """
+        Sample a batch of transitions from envs.
+        Reporting statistics as well.
+        :return stats. performance summary about the batch
+        """
+        noise = torch.zeros([1,1])
+        self.memory.reset()
+        nb_transitions = 0
 
-        if render:
-            env.render()
-        if done:
-            break
+        total_rewards = 0
+        num_episodes = 0
+        while nb_transitions < self.batch_size:
+            state = self.env.reset()
+            num_episodes += 1
+            episode_length = 0
+            while episode_length < self.T:
+                state_t = torch.from_numpy(state).float().unsqueeze(0)
+                mean, logvar = self.actor(state_t)
+                noise.normal_()
+                action_t = mean + noise * torch.exp(0.5 * logvar)
+                action = action_t.detach().numpy()[0]
+
+                # env step
+                next_state, reward, done, _ = self.env.step(action)
+                if render:
+                    self.env.render()
+
+                episode_length += 1
+                nb_transitions += 1
+                total_rewards += reward
+
+                done = done or episode_length == self.T
+                new = 1 if done else 0
+                self.memory.add_transition(state, action,
+                                           reward, noise.item(),
+                                           new)
+                state = next_state
+
+                if done:
+                    break
 
 
-def compute_returns(memory, gamma):
-    """
-    Compute the returns
-    :param memory: rollout object
-    :return: [num_states]. np.array
-    """
-    rewards = memory.rewards
-    assert len(rewards) > 0 # make it's not empty
-    returns = np.zeros([len(rewards)])
-    ret = 0
-    for i in reversed(range(len(rewards))):
-        returns[i] = rewards[i] + gamma * ret
-        ret = returns[i]
-    return returns
+        self.stats['average_reward'] = total_rewards / self.batch_size
+        self.stats['num_episodes'] = num_episodes
+        return self.stats
 
 
