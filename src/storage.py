@@ -85,7 +85,8 @@ class Dataset(object):
         self.means, self.logvars = actor(self.states)
         self.means = self.means.detach()
         self.logvars = self.logvars.detach()
-        self.logprobs = (-0.5*self.logvars - (self.actions - self.means).pow(2) / (2*torch.exp(self.logvars)))
+        vars = torch.exp(self.logvars)
+        self.logprobs = -0.5*(self.logvars + (self.actions-self.means)/ vars)
         self.logprobs = torch.sum(self.logprobs, dim=1, keepdim=True)
 
     def data_generator(self, batch_size):
