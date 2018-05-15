@@ -119,6 +119,15 @@ class Dataset(object):
             return_so_far = rets[t]
         return rets
 
+    def cuda(self):
+        """
+        move everything to GPU
+        """
+        self.states = self.states.cuda()
+        self.actions = self.actions.cuda()
+        self.returns = self.returns.cuda()
+        self.values = self.values.cuda()
+        self.logprobs = self.logprobs.cuda()
 
 
 

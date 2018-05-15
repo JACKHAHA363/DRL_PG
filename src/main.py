@@ -75,6 +75,8 @@ def main():
         # preparing dataset
         runner.sample()
         dataset = Dataset(memory, actor, critic, args.gamma)
+        if USE_CUDA:
+            dataset.cuda()
 
         # train critic
         for _ in range(args.critic_epochs):
