@@ -41,7 +41,7 @@ class MLPCritic(nn.Module):
         """
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
-            torch.nn.init.xavier_normal_(m.weight)
+            torch.nn.init.xavier_normal_(m.weight, gain=1)
             torch.nn.init.constant_(m.bias, 0)
 
 
@@ -85,7 +85,7 @@ class MLPContinuousPolicy(nn.Module):
         """
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
-            torch.nn.init.xavier_normal_(m.weight, gain=0.01)
+            torch.nn.init.xavier_normal_(m.weight, gain=1)
             torch.nn.init.constant_(m.bias, 0)
 
 

@@ -31,7 +31,7 @@ def parser_args():
                         help="number of hidden units")
 
     # policy optimization
-    parser.add_argument('--actor_epochs', default=4, type=int)
+    parser.add_argument('--actor_epochs', default=1, type=int)
     parser.add_argument('--actor_bsz', default=32, type=int)
     parser.add_argument('--clip_range', default=0.2, type=float,
                         help="range for ratio clipping in surrogate loss")
@@ -40,9 +40,10 @@ def parser_args():
 
     # critic optimization
     parser.add_argument('--critic_epochs', default=1, type=int)
-    parser.add_argument('--critic_bsz', default=128, type=int)
+    parser.add_argument('--critic_bsz', default=5000, type=int)
+    parser.add_argument('--critic_l2_decay', default=1e-3, type=float)
     # entropy
-    parser.add_argument('--ent_coef', default=0.0, type=float)
+    parser.add_argument('--ent_coef', default=0.01, type=float)
     args = parser.parse_args()
     return args
 
@@ -68,7 +69,8 @@ def main():
         actor.cuda()
         critic.cuda()
     actor_opt = optim.Adam(actor.parameters(), lr=7e-4, eps=1e-5)
-    critic_opt = optim.Adam(critic.parameters(), lr=1e-4, eps=1e-5)
+    critic_opt = optim.SGD(critic.parameters(), lr=1e-2,
+                           weight_decay=args.critic_l2_decay)
 
     memory = RollOut()
 
