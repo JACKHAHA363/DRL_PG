@@ -26,15 +26,15 @@ def parser_args():
     parser.add_argument('--T', default=100, type=int, help="maximum length of each episode")
     parser.add_argument('--batch_size', default=10000, type=int,
                         help='number of transitions each iteration')
-    parser.add_argument('--steps', default=1000, type=int, help="number of policy updates")
+    parser.add_argument('--steps', default=10000, type=int, help="number of policy updates")
 
     # policy optimization
     parser.add_argument('--actor_epochs', default=1, type=int)
-    parser.add_argument('--actor_bsz', default=10000, type=int)
+    parser.add_argument('--actor_bsz', default=256, type=int)
 
     # critic optimization
     parser.add_argument('--critic_epochs', default=1, type=int)
-    parser.add_argument('--critic_bsz', default=128, type=int)
+    parser.add_argument('--critic_bsz', default=256, type=int)
 
     args = parser.parse_args()
     return args
@@ -56,8 +56,8 @@ def main():
                                 action_dim=env.action_space.shape[0],
                                 num_hidden=10)
     critic = MLPCritic(state_dim=env.observation_space.shape[0], num_hidden=10)
-    actor_opt = optim.Adam(actor.parameters(), lr=1e-3)
-    critic_opt = optim.Adam(critic.parameters(), lr=1e-3)
+    actor_opt = optim.Adam(actor.parameters(), lr=1e-4)
+    critic_opt = optim.Adam(critic.parameters(), lr=1e-4)
 
     memory = RollOut()
 
