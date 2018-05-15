@@ -4,7 +4,8 @@
 """
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as Fa
+from torch.distributions.normal import Normal
 
 class MLPCritic(nn.Module):
     """
@@ -69,11 +70,13 @@ class MLPContinuousPolicy(nn.Module):
     def forward(self, states):
         """
         :param states: [bsz, state_dim]
-        :return: means [bsz, action_dim]. logvars [bsz, action_dim]
+        :return: a Normal distributionmeans [bsz, action_dim]. logvars [bsz, action_dim]
         """
         tmp = self.base(states)
         means = self.mean_head(tmp)
-        return means, self.logvars.expand_as(means)
+        logvars = self.logvars.expand_as(means)
+        std = torch.exp(0.5 * logvars)
+        return Normal(means, std)
 
     def weight_init(self, m):
         """

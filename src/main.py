@@ -30,11 +30,17 @@ def parser_args():
 
     # policy optimization
     parser.add_argument('--actor_epochs', default=1, type=int)
-    parser.add_argument('--actor_bsz', default=256, type=int)
+    parser.add_argument('--actor_bsz', default=32, type=int)
 
     # critic optimization
     parser.add_argument('--critic_epochs', default=1, type=int)
-    parser.add_argument('--critic_bsz', default=256, type=int)
+    parser.add_argument('--critic_bsz', default=32, type=int)
+
+    # ppo
+    parser.add_argument('--kl_coef', default=0.1, type=float)
+
+    # entropy
+    parser.add_argument('--ent_coef', default=0.01, type=float)
 
     args = parser.parse_args()
     return args
@@ -99,20 +105,24 @@ def main():
                 # another forward pass to evaluate actions
                 states = batch['states']
                 actions = batch['actions']
-                means, logvars = actor(states) # [T, action_dim]
+                old_logprobs = batch['logprobs']
+                curr_dist = actor(states) # [T, action_dim]
+                curr_logprobs = curr_dist.log_prob(actions)
 
-                # logprobs = -0.5 logvar - (x-mu)^2/2sigma^2 [bsz, 1]
-                logprobs = -0.5*logvars - (actions - means).pow(2) / (2*torch.exp(logvars))
-                logprobs = torch.sum(logprobs, dim=1, keepdim=True)
-
-                actor_loss = -((rets - baseline) * logprobs).mean()
+                # surrogate loss
+                surrogate_loss = - torch.exp(curr_logprobs - old_logprobs) * (rets - baseline)
+                surrogate_loss = torch.mean(surrogate_loss)
 
                 # add correction bias term
                 if args.baseline == 'world':
                     raise NotImplementedError
 
+                # add entropy term
+                entropy = curr_dist.entropy().mean()
+                surrogate_loss -= args.ent_coef * entropy
+
                 actor_opt.zero_grad()
-                actor_loss.backward()
+                surrogate_loss.backward()
                 actor_opt.step()
 
         # record statistics

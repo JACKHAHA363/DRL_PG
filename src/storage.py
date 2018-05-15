@@ -9,6 +9,7 @@ class RollOut(object):
     def __init__(self):
         self.states = []
         self.actions = []
+        self.logprobs = []
         self.rewards = []
         self.noise = []
         self.news = []
@@ -19,16 +20,18 @@ class RollOut(object):
         """
         self.states = []
         self.actions = []
+        self.logprobs = []
         self.rewards = []
         self.noise = []
         self.news = []
 
-    def add_transition(self, state, action, reward, noise, new):
+    def add_transition(self, state, action, logprob, reward, noise, new):
         """
         Append transition
         """
         self.states.append(state)
         self.actions.append(action)
+        self.logprobs.append(logprob)
         self.rewards.append(reward)
         self.noise.append(noise)
         self.news.append(new)
@@ -39,6 +42,7 @@ class RollOut(object):
         :return
             t_states: [T, states_dim]. tensor
             t_actions: [T, action_dim]. tensor
+            t_logprobs: [T, 1]. Tensor
             rewards: [T, 1]. Tensor
             noise: [T, 1]. Tensor
             news: [T, 1]. Tensor
@@ -46,10 +50,12 @@ class RollOut(object):
         assert len(self.states) > 0 # we have something
         t_states = torch.from_numpy(np.array(self.states))
         t_actions = torch.from_numpy(np.array(self.actions))
+        t_logprobs = torch.from_numpy(np.array(self.logprobs))
         t_rewards = torch.from_numpy(np.array(self.rewards)).unsqueeze(-1)
         t_noise = torch.from_numpy(np.array(self.noise)).unsqueeze(-1)
         t_news = torch.from_numpy(np.array(self.news)).unsqueeze(-1)
-        return t_states.float(), t_actions.float(), t_rewards.float(), t_noise.float(), t_news.float()
+        return t_states.float(), t_actions.float(), t_logprobs.float(),\
+               t_rewards.float(), t_noise.float(), t_news.float()
 
 
 class Dataset(object):
@@ -68,7 +74,7 @@ class Dataset(object):
         self.total_size = len(memory.states)
 
         # convert to tensors
-        self.states, self.actions, rewards, self.noise, self.news = memory.to_tensors()
+        self.states, self.actions, self.logprobs, rewards, self.noise, self.news = memory.to_tensors()
 
         # normalize reward
         self.rewards_mean = rewards.mean()
@@ -80,14 +86,6 @@ class Dataset(object):
 
         # forward and get state value
         self.values = critic(self.states).detach()
-
-        # forward and get action probs [T, 1]
-        self.means, self.logvars = actor(self.states)
-        self.means = self.means.detach()
-        self.logvars = self.logvars.detach()
-        vars = torch.exp(self.logvars)
-        self.logprobs = -0.5*(self.logvars + (self.actions-self.means)/ vars)
-        self.logprobs = torch.sum(self.logprobs, dim=1, keepdim=True)
 
     def data_generator(self, batch_size):
         """

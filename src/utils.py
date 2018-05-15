@@ -19,7 +19,6 @@ class Runner(object):
         Reporting statistics as well.
         :return stats. performance summary about the batch
         """
-        noise = torch.zeros([1,1])
         self.memory.reset()
         nb_transitions = 0
 
@@ -31,12 +30,13 @@ class Runner(object):
             episode_length = 0
             while episode_length < self.T:
                 state_t = torch.from_numpy(state).float().unsqueeze(0)
-                mean, logvar = self.actor(state_t)
-                noise.normal_()
-                action_t = mean + noise * torch.exp(0.5 * logvar)
-                action = action_t.detach().numpy()[0]
+                dist = self.actor(state_t)
+                action = dist.sample()
+                logprob = dist.log_prob(action).item()
+                noise = ((action - dist.mean) / dist.stddev).item()
 
                 # env step
+                action = action.numpy()[0]
                 next_state, reward, done, _ = self.env.step(action)
                 if render:
                     self.env.render()
@@ -47,9 +47,8 @@ class Runner(object):
 
                 done = done or episode_length == self.T
                 new = 1 if done else 0
-                self.memory.add_transition(state, action,
-                                           reward, noise.item(),
-                                           new)
+                self.memory.add_transition(state, action, logprob,
+                                           reward, noise, new)
                 state = next_state
 
                 if done:
