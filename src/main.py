@@ -27,6 +27,8 @@ def parser_args():
     parser.add_argument('--batch_size', default=10000, type=int,
                         help='number of transitions each iteration')
     parser.add_argument('--steps', default=10000, type=int, help="number of policy updates")
+    parser.add_argument('--num_hidden', default=64, type=int,
+                        help="number of hidden units")
 
     # policy optimization
     parser.add_argument('--actor_epochs', default=4, type=int)
@@ -59,8 +61,9 @@ def main():
 
     actor = MLPContinuousPolicy(state_dim=env.observation_space.shape[0],
                                 action_dim=env.action_space.shape[0],
-                                num_hidden=10)
-    critic = MLPCritic(state_dim=env.observation_space.shape[0], num_hidden=10)
+                                num_hidden=args.num_hidden)
+    critic = MLPCritic(state_dim=env.observation_space.shape[0],
+                       num_hidden=args.num_hidden)
     if USE_CUDA:
         actor.cuda()
         critic.cuda()
@@ -75,6 +78,8 @@ def main():
         # preparing dataset
         runner.sample()
         dataset = Dataset(memory, actor, critic, args.gamma)
+        if USE_CUDA:
+            dataset.cuda()
 
         # train critic
         for _ in range(args.critic_epochs):

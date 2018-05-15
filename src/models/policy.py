@@ -4,7 +4,7 @@
 """
 import torch
 import torch.nn as nn
-import torch.nn.functional as Fa
+import torch.nn.functional as F
 from torch.distributions.normal import Normal
 
 class MLPCritic(nn.Module):
@@ -20,9 +20,9 @@ class MLPCritic(nn.Module):
         super().__init__()
         self.main = nn.Sequential(
             nn.Linear(state_dim, num_hidden),
-            nn.SELU(inplace=True),
+            nn.Tanh(),
             nn.Linear(num_hidden, num_hidden),
-            nn.SELU(inplace=True),
+            nn.Tanh(),
             nn.Linear(num_hidden, 1),
         )
 
@@ -43,6 +43,7 @@ class MLPCritic(nn.Module):
         if classname.find('Linear') != -1:
             torch.nn.init.xavier_normal_(m.weight)
             torch.nn.init.constant_(m.bias, 0)
+
 
 class MLPContinuousPolicy(nn.Module):
     """
