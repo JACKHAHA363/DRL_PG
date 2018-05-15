@@ -83,6 +83,7 @@ class Dataset(object):
 
         # compute returns [T, 1]
         self.returns = self.compute_returns(self.rewards, self.news, gamma)
+        self.origin_returns = self.compute_returns(rewards, self.news, gamma)
 
         # forward and get state value
         self.values = critic(self.states).detach()

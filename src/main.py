@@ -27,12 +27,12 @@ def parser_args():
     parser.add_argument('--batch_size', default=10000, type=int,
                         help='number of transitions each iteration')
     parser.add_argument('--steps', default=10000, type=int, help="number of policy updates")
-    parser.add_argument('--num_hidden', default=64, type=int,
+    parser.add_argument('--num_hidden', default=20, type=int,
                         help="number of hidden units")
 
     # policy optimization
     parser.add_argument('--actor_epochs', default=1, type=int)
-    parser.add_argument('--actor_bsz', default=32, type=int)
+    parser.add_argument('--actor_bsz', default=2000, type=int)
     parser.add_argument('--clip_range', default=0.2, type=float,
                         help="range for ratio clipping in surrogate loss")
     parser.add_argument('--max_grad_norm', default=0.5, type=float,
@@ -40,9 +40,9 @@ def parser_args():
 
     # critic optimization
     parser.add_argument('--critic_epochs', default=1, type=int)
-    parser.add_argument('--critic_bsz', default=5000, type=int)
+    parser.add_argument('--critic_bsz', default=128, type=int)
     parser.add_argument('--critic_l2_decay', default=1e-3, type=float)
-    # entropy
+    # ntropy
     parser.add_argument('--ent_coef', default=0.01, type=float)
     args = parser.parse_args()
     return args
@@ -123,7 +123,6 @@ def main():
 
                 # surrogate loss
                 advs = rets - baseline
-                advs = (advs - advs.mean()) / (advs.std() + 1e-5)
                 ratio = torch.exp(curr_logprobs - old_logprobs)
                 surr1 = ratio * advs
                 surr2 = torch.clamp(ratio, 1.0 - args.clip_range, 1.0 + args.clip_range) * advs
@@ -149,7 +148,8 @@ def main():
             for key in stats.keys():
                 print("{} : {:.3f}".format(key, stats[key]))
                 writer.add_scalar(key, stats[key], step + 1)
-            discounted_return = dataset.returns[0].item()
+            # use unnormalized ones
+            discounted_return = dataset.origin_returns[0].item()
             print("discounted return: {:.3f}".format(discounted_return))
             writer.add_scalar('discounted return', discounted_return, step + 1)
 
