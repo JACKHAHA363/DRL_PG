@@ -23,6 +23,7 @@ def test_rollout():
     assert np.allclose(rets[20].item(), torch.sum(dataset.rewards[20:40]).item())
     assert np.allclose(rets[40].item(), torch.sum(dataset.rewards[40:60]).item())
     assert np.allclose(rets[60].item(), torch.sum(dataset.rewards[60:80]).item())
+    assert dataset.logprobs.requires_grad == False
 
 
 
