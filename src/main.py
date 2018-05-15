@@ -1,14 +1,14 @@
 import argparse
 
-
 import torch
 import torch.optim as optim
-
 from envs import PendulumEnv, Continuous_MountainCarEnv
 from models import MLPCritic, MLPContinuousPolicy
 from storage import RollOut, Dataset
 from utils import Runner
 from tensorboardX import SummaryWriter
+
+USE_CUDA = torch.cuda.is_available()
 
 def parser_args():
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
@@ -39,11 +39,8 @@ def parser_args():
     # critic optimization
     parser.add_argument('--critic_epochs', default=1, type=int)
     parser.add_argument('--critic_bsz', default=128, type=int)
-
     # entropy
-    parser.add_argument('--ent_coef', default=0.01, type=float)
-
-
+    parser.add_argument('--ent_coef', default=0.0, type=float)
     args = parser.parse_args()
     return args
 
@@ -64,7 +61,10 @@ def main():
                                 action_dim=env.action_space.shape[0],
                                 num_hidden=10)
     critic = MLPCritic(state_dim=env.observation_space.shape[0], num_hidden=10)
-    actor_opt = optim.Adam(actor.parameters(), lr=1e-4, eps=1e-5)
+    if USE_CUDA:
+        actor.cuda()
+        critic.cuda()
+    actor_opt = optim.Adam(actor.parameters(), lr=7e-4, eps=1e-5)
     critic_opt = optim.Adam(critic.parameters(), lr=1e-4, eps=1e-5)
 
     memory = RollOut()
@@ -116,6 +116,7 @@ def main():
 
                 # surrogate loss
                 advs = rets - baseline
+                advs = (advs - advs.mean()) / (advs.std() + 1e-5)
                 ratio = torch.exp(curr_logprobs - old_logprobs)
                 surr1 = ratio * advs
                 surr2 = torch.clamp(ratio, 1.0 - args.clip_range, 1.0 + args.clip_range) * advs
@@ -128,10 +129,6 @@ def main():
                 # add entropy term
                 entropy = curr_dist.entropy().mean()
                 surrogate_loss -= args.ent_coef * entropy
-
-                # add KL term
-                KL = 0.5 * (old_logprobs - curr_logprobs).pow(2)
-                KL = KL.mean()
 
                 actor_opt.zero_grad()
                 surrogate_loss.backward()
